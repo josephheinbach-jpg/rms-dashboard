@@ -1,70 +1,60 @@
+// app/dashboard/page.tsx (or src/app/dashboard/page.tsx)
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export const runtime = 'nodejs'
 
-import { requireOrg } from '../../lib/authz'
 import { prisma } from '../../lib/prisma'
-import Link from 'next/link'
+import { cookies } from 'next/headers'
 
-type Reading = { ts: Date; value: unknown }
-type SensorWithReading = {
+type Org = { id: string; name: string }
+type Sensor = {
   id: string
-  name: string
-  type: string
-  unit: string | null
-  readings: Reading[]
+  orgId: string
+  sensorName: string | null
+  status: string | null
+  temperature: number | null
+  humidity: number | null
+  battery: number | null
+  ts: Date
 }
 
-export default async function DashboardPage() {
-  const { orgId, org } = await requireOrg()
+export default async function Dashboard() {
+  const c = cookies()
+  const cookieOrgId = c.get('orgId')?.value ?? null
 
-  const sensors = (await prisma.sensor.findMany({
-    where: { organizationId: orgId },
-    include: { readings: { orderBy: { ts: 'desc' }, take: 1 } },
-    orderBy: { name: 'asc' }
-  })) as unknown as SensorWithReading[]
+  // pick active org (cookie or first)
+  let activeOrg: Org | null = null
+  if (cookieOrgId) {
+    activeOrg = (await prisma.organization.findUnique({ where: { id: cookieOrgId } })) as Org | null
+  }
+  if (!activeOrg) {
+    activeOrg = (await prisma.organization.findFirst({ orderBy: { name: 'asc' } })) as Org | null
+  }
+
+  // load sensors for that org
+  const sensors: Sensor[] = activeOrg
+    ? ((await prisma.sensor.findMany({
+        where: { orgId: activeOrg.id }, // NOTE: orgId (camelCase) in Prisma
+        orderBy: { ts: 'desc' },
+        take: 50,
+      })) as unknown as Sensor[])
+    : []
 
   return (
-    <main>
-      <h2 className="text-xl font-semibold mb-2">{org.name} · Dashboard</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {sensors.length === 0 ? (
-          <div className="text-gray-500">No sensors yet.</div>
-        ) : (
-          sensors.map((s) => {
-            const current = s.readings?.[0]
-            const value =
-              current !== undefined ? Number((current as any).value) : null
+    <main className="p-6 space-y-4">
+      <h2 className="text-2xl font-semibold">
+        Dashboard {activeOrg ? `– ${activeOrg.name}` : ''}
+      </h2>
 
-            return (
-              <div key={s.id} className="rounded-xl border bg-white p-4">
-                <div className="text-sm text-gray-600">
-                  {s.type} {s.unit ? `(${s.unit})` : ''}
-                </div>
-                <div className="text-lg font-bold">{s.name}</div>
-                <div className="mt-2 text-2xl">
-                  {value !== null && !Number.isNaN(value)
-                    ? value.toFixed(2)
-                    : '—'}
-                </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  {current
-                    ? new Date((current as any).ts).toLocaleString()
-                    : 'No data'}
-                </div>
-                <div className="mt-3">
-                  <Link
-                    className="underline text-sm"
-                    href={`/dashboard/sensors/${s.id}`}
-                  >
-                    View 24h trend →
-                  </Link>
-                </div>
-              </div>
-            )
-          })
-        )}
-      </div>
-    </main>
-  )
-}
+      {sensors.length === 0 ? (
+        <div className="text-gray-600">No sensor data yet.</div>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border bg-white">
+          <table className="min-w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-2 text-left">Sensor</th>
+                <th className="px-4 py-2 text-left">Status</th>
+                <th className="px-4 py-2 text-left">Temp</th>
+                <th className="px-4 py-2 text-left">Humidity</th>
+                <th className="px-4 py-2 text-left">Battery</th>
 
