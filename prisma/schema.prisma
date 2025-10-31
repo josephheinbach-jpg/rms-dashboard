@@ -1,3 +1,5 @@
+// prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,92 +10,90 @@ datasource db {
 }
 
 model Organization {
-  id           String   @id @default(cuid())
-  name         String
-  slug         String   @unique
-  users        OrganizationUser[]
-  devices      Device[]
-  sensors      Sensor[]
-  dashboards   Dashboard[]
-  rules        Rule[]
-  createdAt    DateTime @default(now())
-}
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
 
-model OrganizationUser {
-  id             String   @id @default(cuid())
-  organizationId String
-  userId         String
-  role           Role
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  @@unique([organizationId, userId])
-}
-
-enum Role {
-  OWNER
-  ADMIN
-  VIEWER
+  devices   Device[]
+  sensors   Sensor[]
 }
 
 model Device {
-  id             String   @id @default(cuid())
+  id             String        @id @default(cuid())
   organizationId String
-  monnitId       String   @unique
-  name           String
-  lastSeenAt     DateTime?
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  sensors        Sensor[]
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+
+  monnitId   String   @unique
+  name       String?
+  lastSeenAt DateTime?
+  createdAt  DateTime @default(now())
+
+  sensors Sensor[]
+
+  @@index([organizationId])
+  @@index([monnitId])
 }
 
 model Sensor {
-  id             String   @id @default(cuid())
+  id             String        @id @default(cuid())
   organizationId String
-  deviceId       String
-  monnitId       String   @unique
-  type           String
-  unit           String?
-  name           String
-  device         Device        @relation(fields: [deviceId], references: [id])
   organization   Organization  @relation(fields: [organizationId], references: [id])
-  readings       Reading[]
+
+  deviceId String
+  device   Device @relation(fields: [deviceId], references: [id])
+
+  monnitId String  @unique
+  name     String?
+  type     String
+  unit     String?
+
+  readings  Reading[]
+  createdAt DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([deviceId])
+  @@index([monnitId])
 }
 
 model Reading {
-  id         String   @id @default(cuid())
-  sensorId   String
-  ts         DateTime @index
-  value      Double
-  sensor     Sensor   @relation(fields: [sensorId], references: [id])
+  id       String   @id @default(cuid())
+  sensorId String
+  sensor   Sensor   @relation(fields: [sensorId], references: [id])
+
+  ts    DateTime
+  value Decimal     // was Double
+
   @@index([sensorId, ts])
+  @@index([ts])
 }
 
 model Rule {
-  id             String   @id @default(cuid())
+  id             String        @id @default(cuid())
   organizationId String
-  sensorId       String
-  name           String
-  comparison     String
-  threshold      Double
-  notifyEmail    String?
-  notifySms      String?
-  active         Boolean  @default(true)
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  sensor         Sensor       @relation(fields: [sensorId], references: [id])
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+
+  sensorId   String?
+  sensor     Sensor?   @relation(fields: [sensorId], references: [id])
+  comparison String
+  threshold  Decimal    // was Double
+  createdAt  DateTime   @default(now())
+
+  @@index([organizationId])
+  @@index([sensorId])
 }
 
 model Alert {
-  id             String   @id @default(cuid())
+  id             String        @id @default(cuid())
   organizationId String
-  ruleId         String
-  triggeredAt    DateTime @default(now())
-  value          Double
-  sentEmail      Boolean  @default(false)
-  sentSms        Boolean  @default(false)
-}
+  organization   Organization  @relation(fields: [organizationId], references: [id])
 
-model Dashboard {
-  id             String   @id @default(cuid())
-  organizationId String
-  name           String
-  config         Json
-  organization   Organization @relation(fields: [organizationId], references: [id])
+  sensorId    String?
+  sensor      Sensor?  @relation(fields: [sensorId], references: [id])
+  triggeredAt DateTime @default(now())
+  value       Decimal   // was Double
+  message     String?
+
+  @@index([organizationId])
+  @@index([sensorId])
+  @@index([triggeredAt])
 }
