@@ -1,6 +1,7 @@
 import { prisma } from '../../../../lib/prisma'
 import { requireOrg } from '../../../../lib/authz'
 
+
 import TemperatureTrend from '@/components/widgets/TemperatureTrend'
 
 export default async function SensorDetail({ params }: { params: { id: string }}) {
