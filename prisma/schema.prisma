@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  users        OrganizationUser[]
+  devices      Device[]
+  sensors      Sensor[]
+  dashboards   Dashboard[]
+  rules        Rule[]
+  createdAt    DateTime @default(now())
+}
+
+model OrganizationUser {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  role           Role
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@unique([organizationId, userId])
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  VIEWER
+}
+
+model Device {
+  id             String   @id @default(cuid())
+  organizationId String
+  monnitId       String   @unique
+  name           String
+  lastSeenAt     DateTime?
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  sensors        Sensor[]
+}
+
+model Sensor {
+  id             String   @id @default(cuid())
+  organizationId String
+  deviceId       String
+  monnitId       String   @unique
+  type           String
+  unit           String?
+  name           String
+  device         Device        @relation(fields: [deviceId], references: [id])
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  readings       Reading[]
+}
+
+model Reading {
+  id         String   @id @default(cuid())
+  sensorId   String
+  ts         DateTime @index
+  value      Double
+  sensor     Sensor   @relation(fields: [sensorId], references: [id])
+  @@index([sensorId, ts])
+}
+
+model Rule {
+  id             String   @id @default(cuid())
+  organizationId String
+  sensorId       String
+  name           String
+  comparison     String
+  threshold      Double
+  notifyEmail    String?
+  notifySms      String?
+  active         Boolean  @default(true)
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  sensor         Sensor       @relation(fields: [sensorId], references: [id])
+}
+
+model Alert {
+  id             String   @id @default(cuid())
+  organizationId String
+  ruleId         String
+  triggeredAt    DateTime @default(now())
+  value          Double
+  sentEmail      Boolean  @default(false)
+  sentSms        Boolean  @default(false)
+}
+
+model Dashboard {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  config         Json
+  organization   Organization @relation(fields: [organizationId], references: [id])
+}
