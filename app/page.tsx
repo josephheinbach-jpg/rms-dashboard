@@ -2,6 +2,8 @@ import { prisma } from '../lib/prisma'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
+type Org = { id: string; name: string }
+
 async function setOrg(formData: FormData) {
   'use server'
   const orgId = String(formData.get('orgId') || '')
@@ -18,7 +20,9 @@ async function setOrg(formData: FormData) {
 }
 
 export default async function HomePage() {
-  const orgs = await prisma.organization.findMany({ orderBy: { name: 'asc' } })
+  const orgs = (await prisma.organization.findMany({
+    orderBy: { name: 'asc' },
+  })) as Org[]
 
   return (
     <main>
@@ -29,7 +33,7 @@ export default async function HomePage() {
       ) : (
         <form action={setOrg}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {orgs.map((o) => (
+            {orgs.map((o: Org) => (
               <button
                 key={o.id}
                 type="submit"
