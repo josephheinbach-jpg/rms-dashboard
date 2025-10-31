@@ -16,6 +16,10 @@ model Organization {
 
   devices   Device[]
   sensors   Sensor[]
+
+  // back-relations
+  rules   Rule[]  @relation("OrgRules")
+  alerts  Alert[] @relation("OrgAlerts")
 }
 
 model Device {
@@ -50,6 +54,10 @@ model Sensor {
   readings  Reading[]
   createdAt DateTime @default(now())
 
+  // back-relations
+  rules  Rule[]  @relation("SensorRules")
+  alerts Alert[] @relation("SensorAlerts")
+
   @@index([organizationId])
   @@index([deviceId])
   @@index([monnitId])
@@ -61,7 +69,7 @@ model Reading {
   sensor   Sensor   @relation(fields: [sensorId], references: [id])
 
   ts    DateTime
-  value Decimal     // was Double
+  value Decimal
 
   @@index([sensorId, ts])
   @@index([ts])
@@ -70,13 +78,14 @@ model Reading {
 model Rule {
   id             String        @id @default(cuid())
   organizationId String
-  organization   Organization  @relation(fields: [organizationId], references: [id])
+  organization   Organization  @relation(name: "OrgRules", fields: [organizationId], references: [id])
 
   sensorId   String?
-  sensor     Sensor?   @relation(fields: [sensorId], references: [id])
+  sensor     Sensor?   @relation(name: "SensorRules", fields: [sensorId], references: [id])
+
   comparison String
-  threshold  Decimal    // was Double
-  createdAt  DateTime   @default(now())
+  threshold  Decimal
+  createdAt  DateTime @default(now())
 
   @@index([organizationId])
   @@index([sensorId])
@@ -85,12 +94,13 @@ model Rule {
 model Alert {
   id             String        @id @default(cuid())
   organizationId String
-  organization   Organization  @relation(fields: [organizationId], references: [id])
+  organization   Organization  @relation(name: "OrgAlerts", fields: [organizationId], references: [id])
 
   sensorId    String?
-  sensor      Sensor?  @relation(fields: [sensorId], references: [id])
+  sensor      Sensor?  @relation(name: "SensorAlerts", fields: [sensorId], references: [id])
+
   triggeredAt DateTime @default(now())
-  value       Decimal   // was Double
+  value       Decimal
   message     String?
 
   @@index([organizationId])
