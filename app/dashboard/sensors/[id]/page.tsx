@@ -1,73 +1,22 @@
-import Link from 'next/link'
-import { requireOrg } from '../../../../lib/authz'
-import { prisma } from '../../../../lib/prisma'
+// app/dashboard/sensors/[id]/page.tsx
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
-type Row = { ts: Date; value: unknown }
+import React from 'react'
 
-export default async function SensorDetailPage({
-  params,
-}: {
-  params: { id: string }
-}) {
-  const { orgId } = await requireOrg()
+type Params = { params: { id: string } }
 
-  const sensor = await prisma.sensor.findFirst({
-    where: { id: params.id, organizationId: orgId },
-    select: { id: true, name: true, type: true, unit: true },
-  })
-  if (!sensor) {
-    return (
-      <main>
-        <h2 className="text-xl font-semibold mb-2">Sensor not found</h2>
-        <Link className="underline" href="/dashboard">
-          ← Back to Dashboard
-        </Link>
-      </main>
-    )
-  }
-
-  const rows = await prisma.reading.findMany({
-    where: { sensorId: params.id, sensor: { organizationId: orgId } },
-    orderBy: { ts: 'asc' },
-    select: { ts: true, value: true },
-    take: 2000,
-  })
-
-  const data = (rows as Row[]).map((r: Row) => ({
-    ts: r.ts.toISOString(),
-    value: Number(r.value as number),
-  }))
-
+export default function SensorDetail({ params }: Params) {
   return (
-    <main>
-      <h2 className="text-xl font-semibold mb-2">
-        {sensor.name} · 24h Trend
-      </h2>
-
-      {/* Minimal readout so the page renders even before you wire charts */}
-      <div className="rounded-xl border bg-white p-4">
-        <div className="text-sm text-gray-600">
-          {sensor.type} {sensor.unit ? `(${sensor.unit})` : ''}
-        </div>
-        <div className="text-xs text-gray-500 mb-2">
-          {data.length} points
-        </div>
-
-        <div className="max-h-64 overflow-auto text-sm">
-          {data.slice(-20).map((p, i) => (
-            <div key={i} className="flex justify-between border-b py-1">
-              <span>{new Date(p.ts).toLocaleString()}</span>
-              <span>{Number.isNaN(p.value) ? '—' : p.value}</span>
-            </div>
-          ))}
-        </div>
+    <main className="p-6 space-y-4">
+      <h2 className="text-2xl font-semibold">Sensor Detail</h2>
+      <div className="rounded-xl border bg-white p-4 text-gray-700">
+        Sensor ID: <span className="font-mono">{params.id}</span>
       </div>
-
-      <div className="mt-4">
-        <Link className="underline" href="/dashboard">
-          ← Back to Dashboard
-        </Link>
+      <div className="rounded-xl border bg-white p-4 text-gray-700">
+        (Temporarily stubbed — wiring to Prisma will be added after build is green.)
       </div>
     </main>
   )
 }
+
