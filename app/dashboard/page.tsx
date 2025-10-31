@@ -4,24 +4,51 @@ export const runtime = 'nodejs'
 
 import { prisma } from '../../lib/prisma'
 
+type OrgRow = { id: string; name: string }
+type SensorRow = {
+  id: string
+  sensorName: string | null
+  status: string | null
+  temperature: number | null
+  humidity: number | null
+  battery: number | null
+  ts: string
+}
+
 export default async function Dashboard() {
-  // 1) Pick the first org
-  let org: any = null
+  // 1) First org
+  let org: OrgRow | null = null
   try {
-    org = await prisma.organization.findFirst({ orderBy: { name: 'asc' } })
+    const rows = await prisma.$queryRaw<OrgRow[]>`
+      select id, name
+      from public.organization
+      order by name asc
+      limit 1
+    `
+    org = rows[0] ?? null
   } catch (e) {
     console.error('Org query failed', e)
   }
 
-  // 2) Load recent sensors for that org
-  let sensors: any[] = []
+  // 2) Sensors for that org
+  let sensors: SensorRow[] = []
   if (org) {
     try {
-      sensors = await prisma.sensor.findMany({
-        where: { orgId: org.id },           // matches Prisma field (orgId)
-        orderBy: { ts: 'desc' },
-        take: 50,
-      })
+      const rows = await prisma.$queryRaw<SensorRow[]>`
+        select
+          id,
+          sensor_name as "sensorName",
+          status,
+          temperature::float as temperature,
+          humidity::float as humidity,
+          battery::float as battery,
+          to_char(ts, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as ts
+        from public.sensor
+        where org_id = ${org.id}
+        order by ts desc
+        limit 50
+      `
+      sensors = rows
     } catch (e) {
       console.error('Sensor query failed', e)
     }
@@ -72,3 +99,4 @@ export default async function Dashboard() {
     </main>
   )
 }
+
