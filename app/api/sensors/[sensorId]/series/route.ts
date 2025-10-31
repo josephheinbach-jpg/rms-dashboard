@@ -1,5 +1,6 @@
-import { prisma } from '@/lib/prisma'
-import { requireOrg } from '@/lib/authz'
+import { prisma } from '../../../../../lib/prisma'
+import { requireOrg } from '../../../../../lib/authz'
+
 import { NextResponse } from 'next/server'
 
 export async function GET(_: Request, { params }: { params: { sensorId: string }}) {
