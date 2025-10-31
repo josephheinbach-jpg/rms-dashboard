@@ -1,4 +1,5 @@
-import { requireOrg } from '@/lib/authz'
+import { requireOrg } from '../../lib/authz'
+
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 
