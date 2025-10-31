@@ -2,7 +2,6 @@
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '../../../../lib/prisma'
 import { verifyMonnitSignature } from '../../../../lib/imonnit-verify'
 
 type ReadingPayload = {
@@ -15,13 +14,6 @@ type ReadingPayload = {
     unit?: string
     accountId: string
   }>
-}
-
-async function mapAccount(_accountId: string) {
-  // TODO: Implement your real Monnit Account → Organization mapping.
-  // CHANGED: order by an existing field
-  const org = await prisma.organization.findFirst({ orderBy: { name: 'asc' } })
-  return org?.id ?? null
 }
 
 export async function POST(req: NextRequest) {
@@ -38,44 +30,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'invalid json' }, { status: 400 })
   }
 
-  for (const r of payload.readings ?? []) {
-    const orgId = await mapAccount(r.accountId)
-    if (!orgId) continue
+  // TEMPORARY: no DB writes — just acknowledge
+  const count = Array.isArray(payload.readings) ? payload.readings.length : 0
+  // Optional: log a tiny summary for debugging (Vercel logs)
+  console.log('Monnit webhook received', { count })
 
-    const device = await prisma.device.upsert({
-      where: { monnitId: r.deviceId },
-      update: { lastSeenAt: new Date(r.ts), organizationId: orgId },
-      create: {
-        monnitId: r.deviceId,
-        organizationId: orgId,
-        name: `Device ${r.deviceId}`,
-        lastSeenAt: new Date(r.ts),
-      },
-    })
-
-    const sensor = await prisma.sensor.upsert({
-      where: { monnitId: r.sensorId },
-      update: {
-        type: r.type,
-        unit: r.unit ?? null,
-        name: `Sensor ${r.sensorId}`,
-        deviceId: device.id,
-        organizationId: orgId,
-      },
-      create: {
-        monnitId: r.sensorId,
-        organizationId: orgId,
-        deviceId: device.id,
-        type: r.type,
-        unit: r.unit ?? null,
-        name: `Sensor ${r.sensorId}`,
-      },
-    })
-
-    await prisma.reading.create({
-      data: { sensorId: sensor.id, ts: new Date(r.ts), value: r.value },
-    })
-  }
-
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, received: count })
 }
