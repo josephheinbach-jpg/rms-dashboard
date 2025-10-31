@@ -1,3 +1,6 @@
+// app/api/imonnit/webhook/route.ts
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '../../../../lib/prisma'
 import { verifyMonnitSignature } from '../../../../lib/imonnit-verify'
@@ -16,8 +19,9 @@ type ReadingPayload = {
 
 async function mapAccount(_accountId: string) {
   // TODO: Implement your real Monnit Account → Organization mapping.
-  const org = await prisma.organization.findFirst({ orderBy: { createdAt: 'asc' } })
-  return org?.id || null
+  // CHANGED: order by an existing field
+  const org = await prisma.organization.findFirst({ orderBy: { name: 'asc' } })
+  return org?.id ?? null
 }
 
 export async function POST(req: NextRequest) {
