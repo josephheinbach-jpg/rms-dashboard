@@ -1,12 +1,5 @@
 {
   "build": {
-    "env": {
-      "PRISMA_GENERATE_SKIP_AUTOINSTALL": "1"
-    }
-  },
-  "functions": {
-    "api/**": {
-      "maxDuration": 10
-    }
+    "env": { "PRISMA_GENERATE_SKIP_AUTOINSTALL": "1" }
   }
 }
